@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const taskInput = document.getElementById('task-input');
     const estimatedTimeInput = document.getElementById('estimated-time-input');
     const addTaskBtn = document.getElementById('add-task-btn');
-    const taskOverviewList = document.getElementById('task-overview-list'); // Renamed from taskList
+    const taskHoldingAreaList = document.getElementById('task-holding-area-list'); // Renamed from taskOverviewList
     const todayTaskList = document.getElementById('today-task-list');
 
     // Date navigation elements
@@ -445,8 +445,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
         if (taskDueDate && taskDueDate.setHours(0,0,0,0) === currentViewDate.getTime()) {
             todayTaskList.appendChild(li);
-        } else {
-            taskOverviewList.appendChild(li);
+        } else if (taskDueDate && taskDueDate < currentViewDate && !task.completed) { // Overdue and incomplete
+            todayTaskList.appendChild(li);
+        }else {
+            taskHoldingAreaList.appendChild(li);
         }
     }
 
@@ -714,7 +716,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to re-render all tasks based on current data
     function renderAllTasks() {
         // Clear existing tasks from both lists
-        taskOverviewList.innerHTML = '';
+        taskHoldingAreaList.innerHTML = ''; // Changed from taskOverviewList
         todayTaskList.innerHTML = '';
 
         // Update today's date display
