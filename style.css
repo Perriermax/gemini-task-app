@@ -318,3 +318,59 @@ li.priority-低 {
 .time-diff.under {
     color: #28a745; /* Green for under time */
 }
+
+/* Task Columns */
+.task-columns {
+    display: flex;
+    gap: 20px; /* Space between columns */
+}
+
+.task-column {
+    flex: 1; /* Distribute space equally */
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.task-column h1 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #555;
+}
+
+/* Responsive layout for task columns */
+@media (max-width: 900px) {
+    .task-columns {
+        flex-direction: column; /* Stack columns vertically */
+    }
+    .task-column {
+        margin-bottom: 20px; /* Add space between stacked columns */
+    }
+}
+
+.today-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.today-task-header h1 {
+    margin: 0; /* Remove default h1 margin */
+}
+
+.today-task-header button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 5px 10px;
+    font-size: 1em;
+}
+
+.today-task-header button:hover {
+    background-color: #0056b3;
+}

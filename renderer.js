@@ -11,7 +11,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const taskInput = document.getElementById('task-input');
     const estimatedTimeInput = document.getElementById('estimated-time-input');
     const addTaskBtn = document.getElementById('add-task-btn');
-    const taskList = document.getElementById('task-list');
+    const taskOverviewList = document.getElementById('task-overview-list'); // Renamed from taskList
+    const todayTaskList = document.getElementById('today-task-list');
+
+    // Date navigation elements
+    const prevDayBtn = document.getElementById('prev-day-btn');
+    const nextDayBtn = document.getElementById('next-day-btn');
+    const todayDateDisplay = document.getElementById('today-date-display');
 
     // Pomodoro elements
     const workDurationInput = document.getElementById('work-duration');
@@ -33,15 +39,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     let pomodoroCount = 0;
     let isAppReady = false;
 
+    // Declare today here, accessible by all functions within this scope
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Date variables for navigation
+    let currentViewDate = new Date();
+    currentViewDate.setHours(0, 0, 0, 0);
+
     // Load all saved data (tasks and pomodoro state)
     const allSavedData = await window.electronAPI.getData();
-    const initialTasks = allSavedData.tasks || [];
-    initialTasks.forEach(task => createTaskElement(task));
+    let allTasks = allSavedData.tasks || []; // Use a mutable variable for all tasks
+
+    // Render tasks initially
+    renderAllTasks();
 
     // Check for overdue tasks on startup
-    const overdueTasks = initialTasks.filter(task => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    const overdueTasks = allTasks.filter(task => {
         return task.dueDate && new Date(task.dueDate) < today && !task.completed;
     });
 
@@ -76,6 +90,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     exitFocusBtn.addEventListener('click', exitFocusMode);
 
+    // Date navigation event listeners
+    prevDayBtn.addEventListener('click', () => {
+        currentViewDate.setDate(currentViewDate.getDate() - 1);
+        renderAllTasks();
+    });
+    nextDayBtn.addEventListener('click', () => {
+        currentViewDate.setDate(currentViewDate.getDate() + 1);
+        renderAllTasks();
+    });
+
     // Pomodoro event listeners
     pomodoroStartBtn.addEventListener('click', startPomodoroTimer);
     pomodoroPauseBtn.addEventListener('click', pausePomodoroTimer);
@@ -95,7 +119,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const taskText = taskInput.value.trim();
         const estimatedTime = parseInt(estimatedTimeInput.value) || 0;
         if (taskText === '') return;
-        createTaskElement({ text: taskText, completed: false, priority: '低', timer: { elapsedTime: 0, isRunning: false }, checklist: [], dueDate: '', estimatedTime: estimatedTime });
+        const newTask = { text: taskText, completed: false, priority: '低', timer: { elapsedTime: 0, isRunning: false }, checklist: [], dueDate: '', estimatedTime: estimatedTime };
+        allTasks.push(newTask);
+        renderAllTasks(); // Re-render all tasks to place the new task correctly
         saveAllData();
         taskInput.value = '';
         estimatedTimeInput.value = '';
@@ -109,15 +135,96 @@ document.addEventListener('DOMContentLoaded', async () => {
         task.estimatedTime = task.estimatedTime || 0;
 
         const li = document.createElement('li');
-        li.dataset.task = JSON.stringify(task); // Store task data on the li element
+        li.dataset.taskId = task.id || generateUniqueId();
+        task.id = li.dataset.taskId;
+        li.dataset.task = JSON.stringify(task);
+        li.draggable = true; // Make task items draggable
+
+        // Drag and Drop Event Listeners
+        li.addEventListener('dragstart', (e) => {
+            draggedItem = li;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', li.innerHTML);
+            li.classList.add('dragging');
+        });
+
+        li.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Necessary to allow dropping
+            const bounding = li.getBoundingClientRect();
+            const offset = bounding.y + (bounding.height / 2);
+            if (e.clientY < offset) {
+                li.classList.add('drag-over-top');
+                li.classList.remove('drag-over-bottom');
+            } else {
+                li.classList.add('drag-over-bottom');
+                li.classList.remove('drag-over-top');
+            }
+        });
+
+        li.addEventListener('dragleave', () => {
+            li.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+
+        li.addEventListener('drop', (e) => {
+            e.preventDefault();
+            li.classList.remove('drag-over-top', 'drag-over-bottom');
+
+            if (draggedItem === li) return; // Dropping on itself
+
+            const parentList = li.parentNode;
+            const draggedIndex = Array.from(parentList.children).indexOf(draggedItem);
+            const targetIndex = Array.from(parentList.children).indexOf(li);
+
+            // Reorder in DOM
+            if (li.classList.contains('drag-over-top')) {
+                parentList.insertBefore(draggedItem, li);
+            } else {
+                parentList.insertBefore(draggedItem, li.nextSibling);
+            }
+
+            // If dropped into today-task-list, update dueDate
+            if (parentList.id === 'today-task-list') {
+                const draggedTaskData = allTasks.find(t => t.id === draggedItem.dataset.taskId);
+                if (draggedTaskData) {
+                    // Format currentViewDate to YYYY-MM-DD for dueDate
+                    const year = currentViewDate.getFullYear();
+                    const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(currentViewDate.getDate()).padStart(2, '0');
+                    draggedTaskData.dueDate = `${year}-${month}-${day}`;
+                }
+            }
+
+            // Reorder in allTasks array
+            const draggedTask = allTasks.find(t => t.id === draggedItem.dataset.taskId);
+            const targetTask = allTasks.find(t => t.id === li.dataset.taskId);
+
+            const oldIndex = allTasks.indexOf(draggedTask);
+            const newIndex = allTasks.indexOf(targetTask);
+
+            if (oldIndex > -1 && newIndex > -1) {
+                allTasks.splice(oldIndex, 1);
+                allTasks.splice(newIndex, 0, draggedTask);
+            }
+            renderAllTasks(); // Re-render to reflect due date change and reordering
+            saveAllData();
+        });
+
+        li.addEventListener('dragend', () => {
+            draggedItem.classList.remove('dragging');
+            document.querySelectorAll('.drag-over-top', '.drag-over-bottom').forEach(el => {
+                el.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            draggedItem = null;
+            saveAllData();
+        });
 
         if (task.completed) {
             li.classList.add('completed');
         }
         li.classList.add(`priority-${task.priority}`);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Add class for overdue tasks
+        // Use the 'today' variable from the outer scope
         if (task.dueDate && new Date(task.dueDate) < today && !task.completed) {
             li.classList.add('overdue');
         }
@@ -132,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else if (task.dueDate && new Date(task.dueDate) < today) {
                 li.classList.add('overdue');
             }
-            updateTaskData(li, 'completed', li.classList.contains('completed'));
+            updateTaskData(li.dataset.taskId, 'completed', li.classList.contains('completed'));
             saveAllData();
         });
 
@@ -149,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const newText = input.value.trim();
                 span.textContent = newText;
                 li.replaceChild(span, input);
-                updateTaskData(li, 'text', newText);
+                updateTaskData(li.dataset.taskId, 'text', newText);
                 saveAllData();
             };
 
@@ -175,7 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         prioritySelect.addEventListener('change', () => {
             li.classList.remove('priority-高', 'priority-中', 'priority-低');
             li.classList.add(`priority-${prioritySelect.value}`);
-            updateTaskData(li, 'priority', prioritySelect.value);
+            updateTaskData(li.dataset.taskId, 'priority', prioritySelect.value);
             saveAllData();
         });
 
@@ -185,12 +292,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         dueDateInput.value = task.dueDate;
         dueDateInput.addEventListener('change', () => {
             const newDueDate = dueDateInput.value;
-            updateTaskData(li, 'dueDate', newDueDate);
-            if (newDueDate && new Date(newDueDate) < today && !task.completed) {
-                li.classList.add('overdue');
-            } else {
-                li.classList.remove('overdue');
-            }
+            updateTaskData(li.dataset.taskId, 'dueDate', newDueDate);
+            // Re-render all tasks to move to correct list if due date changes
+            renderAllTasks();
             saveAllData();
         });
 
@@ -215,23 +319,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         let startTime = null;
         let currentElapsedTime = task.timer.elapsedTime;
 
-        const updateTaskTimerDisplay = () => {
-            timerDisplay.textContent = formatTime(currentElapsedTime);
-            updateTimeDiff(task, timerDisplay, timeDiffDisplay); // Pass elements to updateTimeDiff
-        };
-
         const startTimer = () => {
             if (intervalId) return;
             startTime = Date.now() - currentElapsedTime * 1000;
             intervalId = setInterval(() => {
                 currentElapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                updateTaskTimerDisplay();
-                updateTaskData(li, 'timer', { elapsedTime: currentElapsedTime, isRunning: true });
+                timerDisplay.textContent = formatTime(currentElapsedTime);
+                updateTimeDiff(task, timerDisplay, timeDiffDisplay); // Call updateTimeDiff directly
+                updateTaskData(li.dataset.taskId, 'timer', { elapsedTime: currentElapsedTime, isRunning: true });
                 saveAllData();
             }, 1000);
             startBtn.style.display = 'none';
             pauseBtn.style.display = 'inline-block';
-            updateTaskData(li, 'timer', { elapsedTime: currentElapsedTime, isRunning: true });
+            updateTaskData(li.dataset.taskId, 'timer', { elapsedTime: currentElapsedTime, isRunning: true });
             saveAllData();
         };
 
@@ -240,15 +340,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             intervalId = null;
             startBtn.style.display = 'inline-block';
             pauseBtn.style.display = 'none';
-            updateTaskData(li, 'timer', { elapsedTime: currentElapsedTime, isRunning: false });
+            updateTaskData(li.dataset.taskId, 'timer', { elapsedTime: currentElapsedTime, isRunning: false });
             saveAllData();
         };
 
         const resetTimer = () => {
             pauseTimer();
             currentElapsedTime = 0;
-            updateTaskTimerDisplay();
-            updateTaskData(li, 'timer', { elapsedTime: 0, isRunning: false });
+            timerDisplay.textContent = formatTime(currentElapsedTime);
+            updateTimeDiff(task, timerDisplay, timeDiffDisplay); // Call updateTimeDiff directly
+            updateTaskData(li.dataset.taskId, 'timer', { elapsedTime: 0, isRunning: false });
             saveAllData();
         };
 
@@ -269,7 +370,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         deleteBtn.textContent = '削除';
         deleteBtn.className = 'delete-btn';
         deleteBtn.addEventListener('click', () => {
-            taskList.removeChild(li);
+            // Remove task from allTasks array
+            allTasks = allTasks.filter(t => t.id !== task.id);
+            li.remove(); // Remove from DOM
             clearInterval(intervalId);
             saveAllData();
         });
@@ -310,7 +413,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         addChecklistItemBtn.addEventListener('click', () => {
             const itemText = checklistInput.value.trim();
             if (itemText === '') return;
-            createChecklistItemElement({ text: itemText, completed: false }, checklistUl, li); // Pass parent li
+            const newChecklistItem = { text: itemText, completed: false };
+            createChecklistItemElement(newChecklistItem, checklistUl, li); // Pass parent li
+            // Update task data in allTasks array
+            const taskToUpdate = allTasks.find(t => t.id === task.id);
+            if (taskToUpdate) {
+                taskToUpdate.checklist.push(newChecklistItem);
+            }
             checklistInput.value = '';
             checklistInput.focus();
             saveAllData();
@@ -332,7 +441,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.appendChild(checklistContainer);
         // --- End Checklist Section ---
 
-        taskList.appendChild(li);
+        // Append to correct list based on due date
+        const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
+        if (taskDueDate && taskDueDate.setHours(0,0,0,0) === currentViewDate.getTime()) {
+            todayTaskList.appendChild(li);
+        } else {
+            taskOverviewList.appendChild(li);
+        }
     }
 
     function createChecklistItemElement(item, parentUl, parentTaskLi) {
@@ -347,7 +462,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         checkbox.checked = item.completed;
         checkbox.addEventListener('change', () => {
             li.classList.toggle('completed');
-            updateChecklistItemData(parentTaskLi, item, 'completed', checkbox.checked);
+            updateChecklistItemData(parentTaskLi.dataset.taskId, item, 'completed', checkbox.checked);
             saveAllData();
         });
 
@@ -359,7 +474,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         deleteBtn.className = 'delete-checklist-item-btn';
         deleteBtn.addEventListener('click', () => {
             parentUl.removeChild(li);
-            removeChecklistItemData(parentTaskLi, item);
+            removeChecklistItemData(parentTaskLi.dataset.taskId, item);
             saveAllData();
         });
 
@@ -554,38 +669,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Helper function to update task data stored on the li element
-    function updateTaskData(liElement, key, value) {
-        const taskData = JSON.parse(liElement.dataset.task);
-        taskData[key] = value;
-        liElement.dataset.task = JSON.stringify(taskData);
+    function updateTaskData(taskId, key, value) {
+        const taskIndex = allTasks.findIndex(t => t.id === taskId);
+        if (taskIndex !== -1) {
+            allTasks[taskIndex][key] = value;
+        }
     }
 
     // Helper function to update checklist item data stored on the parent task li element
-    function updateChecklistItemData(parentTaskLi, itemToUpdate, key, value) {
-        const taskData = JSON.parse(parentTaskLi.dataset.task);
-        const checklist = taskData.checklist;
-        const itemIndex = checklist.findIndex(item => item.text === itemToUpdate.text); // Simple match for now
-        if (itemIndex !== -1) {
-            checklist[itemIndex][key] = value;
-            parentTaskLi.dataset.task = JSON.stringify(taskData);
+    function updateChecklistItemData(parentTaskId, itemToUpdate, key, value) {
+        const parentTask = allTasks.find(t => t.id === parentTaskId);
+        if (parentTask) {
+            const itemIndex = parentTask.checklist.findIndex(item => item.text === itemToUpdate.text); // Simple match for now
+            if (itemIndex !== -1) {
+                parentTask.checklist[itemIndex][key] = value;
+            }
         }
     }
 
     // Helper function to remove checklist item data from the parent task li element
-    function removeChecklistItemData(parentTaskLi, itemToRemove) {
-        const taskData = JSON.parse(parentTaskLi.dataset.task);
-        taskData.checklist = taskData.checklist.filter(item => item.text !== itemToRemove.text); // Simple match for now
-        parentTaskLi.dataset.task = JSON.stringify(taskData);
+    function removeChecklistItemData(parentTaskId, itemToRemove) {
+        const parentTask = allTasks.find(t => t.id === parentTaskId);
+        if (parentTask) {
+            parentTask.checklist = parentTask.checklist.filter(item => item.text !== itemToRemove.text); // Simple match for now
+        }
     }
 
     // This function now saves both tasks and pomodoro state
     function saveAllData() {
         if (!isAppReady) return;
-
-        const tasks = [];
-        document.querySelectorAll('#task-list > li').forEach(li => {
-            tasks.push(JSON.parse(li.dataset.task)); // Get task data directly from li element
-        });
 
         const pomodoroState = {
             workDuration: parseInt(workDurationInput.value),
@@ -596,6 +708,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             isRunning: isPomodoroRunning
         };
         
-        window.electronAPI.setData({ tasks: tasks, pomodoroState: pomodoroState });
+        window.electronAPI.setData({ tasks: allTasks, pomodoroState: pomodoroState });
+    }
+
+    // Function to re-render all tasks based on current data
+    function renderAllTasks() {
+        // Clear existing tasks from both lists
+        taskOverviewList.innerHTML = '';
+        todayTaskList.innerHTML = '';
+
+        // Update today's date display
+        todayDateDisplay.textContent = currentViewDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Re-create elements for each task
+        allTasks.forEach(task => createTaskElement(task));
+    }
+
+    // Simple unique ID generator
+    function generateUniqueId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 });
