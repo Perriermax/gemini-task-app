@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load all saved data (tasks and pomodoro state)
     const allSavedData = await window.electronAPI.getData();
-    let allTasks = allSavedData.tasks || []; // Use a mutable variable for all tasks
+    let allTasks = allSavedData.tasks || [];
 
     // Render tasks initially
     renderAllTasks();
@@ -80,6 +80,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     isAppReady = true;
+
+    // Initial check for column display
+    updateColumnDisplay();
+
+    // Listen for window resize events
+    window.addEventListener('resize', updateColumnDisplay);
 
     addTaskBtn.addEventListener('click', addTask);
     taskInput.addEventListener('keypress', (e) => {
@@ -128,6 +134,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         taskInput.focus();
     }
 
+    let draggedItem = null;
+
     function createTaskElement(task) {
         task.timer = task.timer || { elapsedTime: 0, isRunning: false };
         task.checklist = task.checklist || [];
@@ -169,49 +177,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             li.classList.remove('drag-over-top', 'drag-over-bottom');
 
-            if (draggedItem === li) return; // Dropping on itself
+            if (draggedItem === li) return;
 
             const parentList = li.parentNode;
-            const draggedIndex = Array.from(parentList.children).indexOf(draggedItem);
-            const targetIndex = Array.from(parentList.children).indexOf(li);
-
-            // Reorder in DOM
-            if (li.classList.contains('drag-over-top')) {
-                parentList.insertBefore(draggedItem, li);
-            } else {
-                parentList.insertBefore(draggedItem, li.nextSibling);
-            }
+            const draggedTaskData = allTasks.find(t => t.id === draggedItem.dataset.taskId);
 
             // If dropped into today-task-list, update dueDate
             if (parentList.id === 'today-task-list') {
-                const draggedTaskData = allTasks.find(t => t.id === draggedItem.dataset.taskId);
                 if (draggedTaskData) {
-                    // Format currentViewDate to YYYY-MM-DD for dueDate
                     const year = currentViewDate.getFullYear();
                     const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
                     const day = String(currentViewDate.getDate()).padStart(2, '0');
                     draggedTaskData.dueDate = `${year}-${month}-${day}`;
                 }
+            } else if (parentList.id === 'task-holding-area-list') { // If dropped into task-holding-area-list, clear dueDate
+                if (draggedTaskData) {
+                    draggedTaskData.dueDate = '';
+                }
             }
 
-            // Reorder in allTasks array
-            const draggedTask = allTasks.find(t => t.id === draggedItem.dataset.taskId);
+            // Reorder in allTasks array (simplified for single list for now)
+            // This part needs to be more robust for cross-list dragging if lists were active
             const targetTask = allTasks.find(t => t.id === li.dataset.taskId);
 
-            const oldIndex = allTasks.indexOf(draggedTask);
+            const oldIndex = allTasks.indexOf(draggedTaskData);
             const newIndex = allTasks.indexOf(targetTask);
 
             if (oldIndex > -1 && newIndex > -1) {
                 allTasks.splice(oldIndex, 1);
-                allTasks.splice(newIndex, 0, draggedTask);
+                allTasks.splice(newIndex, 0, draggedTaskData);
             }
-            renderAllTasks(); // Re-render to reflect due date change and reordering
+            renderAllTasks();
             saveAllData();
         });
 
         li.addEventListener('dragend', () => {
             draggedItem.classList.remove('dragging');
-            document.querySelectorAll('.drag-over-top', '.drag-over-bottom').forEach(el => {
+            document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
                 el.classList.remove('drag-over-top', 'drag-over-bottom');
             });
             draggedItem = null;
@@ -224,7 +226,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.classList.add(`priority-${task.priority}`);
 
         // Add class for overdue tasks
-        // Use the 'today' variable from the outer scope
         if (task.dueDate && new Date(task.dueDate) < today && !task.completed) {
             li.classList.add('overdue');
         }
@@ -293,7 +294,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         dueDateInput.addEventListener('change', () => {
             const newDueDate = dueDateInput.value;
             updateTaskData(li.dataset.taskId, 'dueDate', newDueDate);
-            // Re-render all tasks to move to correct list if due date changes
+            renderAllTasks();
+            saveAllData();
+        });
+
+        const clearDueDateBtn = document.createElement('button');
+        clearDueDateBtn.textContent = 'クリア';
+        clearDueDateBtn.className = 'clear-due-date-btn';
+        clearDueDateBtn.addEventListener('click', () => {
+            dueDateInput.value = '';
+            updateTaskData(li.dataset.taskId, 'dueDate', '');
             renderAllTasks();
             saveAllData();
         });
@@ -381,6 +391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.appendChild(span);
         li.appendChild(prioritySelect);
         li.appendChild(dueDateInput);
+        li.appendChild(clearDueDateBtn);
         li.appendChild(timerDisplay);
         li.appendChild(startBtn);
         li.appendChild(pauseBtn);
@@ -620,7 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         pomodoroPhase = 'break';
                         pomodoroTimeLeft = breakDurationInput.value * 60;
                         pomodoroStatus.textContent = '休憩中...';
-                    }
+                    }m
                 } else {
                     pomodoroPhase = 'work';
                     pomodoroTimeLeft = workDurationInput.value * 60;
@@ -724,6 +735,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Re-create elements for each task
         allTasks.forEach(task => createTaskElement(task));
+    }
+
+    // Function to update column display based on window width
+    function updateColumnDisplay() {
+        const taskColumns = document.querySelector('.task-columns');
+        if (window.innerWidth < 900) { // Example breakpoint
+            taskColumns.classList.add('single-column');
+        } else {
+            taskColumns.classList.remove('single-column');
+        }
     }
 
     // Simple unique ID generator
