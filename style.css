@@ -348,6 +348,12 @@ li.priority-低 {
     .task-column {
         margin-bottom: 20px; /* Add space between stacked columns */
     }
+    .task-column:nth-child(1) {
+        display: none; /* Hide the first column (Task Overview) */
+    }
+    .task-columns.show-all .task-column:nth-child(1) {
+        display: block; /* Show it when show-all is active */
+    }
 }
 
 .today-task-header {

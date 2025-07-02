@@ -81,6 +81,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     isAppReady = true;
 
+    // Initial check for column display
+    updateColumnDisplay();
+
+    // Listen for window resize events
+    window.addEventListener('resize', updateColumnDisplay);
+
     addTaskBtn.addEventListener('click', addTask);
     taskInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
@@ -722,6 +728,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Re-create elements for each task
         allTasks.forEach(task => createTaskElement(task));
+    }
+
+    // Function to update column display based on window width
+    function updateColumnDisplay() {
+        const taskColumns = document.querySelector('.task-columns');
+        if (window.innerWidth < 900) { // Example breakpoint
+            taskColumns.classList.add('single-column');
+        } else {
+            taskColumns.classList.remove('single-column');
+        }
     }
 
     // Simple unique ID generator
