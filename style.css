@@ -1,0 +1,320 @@
+body {
+    font-family: sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    margin: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.input-container {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+#task-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#estimated-time-input {
+    width: 80px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-left: 10px;
+    text-align: center;
+}
+
+#add-task-btn {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+#add-task-btn:hover {
+    background-color: #0056b3;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    background: white;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    flex-wrap: wrap; /* Allow items to wrap */
+    align-items: center;
+}
+
+li.completed {
+    text-decoration: line-through;
+    color: #888;
+}
+
+li.overdue {
+    background-color: #ffe0e0; /* Light red background for overdue tasks */
+    border-left: 5px solid #dc3545; /* Red border for overdue tasks */
+}
+
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 5px 10px;
+    margin-left: auto;
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+}
+
+.priority-select {
+    margin-left: 10px;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+/* Priority styling */
+li.priority-高 {
+    border-left: 5px solid #dc3545; /* Red for High */
+}
+
+li.priority-中 {
+    border-left: 5px solid #ffc107; /* Yellow for Medium */
+}
+
+li.priority-低 {
+    border-left: 5px solid #28a745; /* Green for Low */
+}
+
+.timer-display {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1em;
+    margin-left: 15px;
+    margin-right: 10px;
+    min-width: 80px; /* Ensure consistent width */
+    text-align: right;
+}
+
+.timer-btn {
+    padding: 5px 8px;
+    margin-right: 5px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8em;
+}
+
+.start-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.start-btn:hover {
+    background-color: #218838;
+}
+
+.pause-btn {
+    background-color: #ffc107;
+    color: #333;
+}
+
+.pause-btn:hover {
+    background-color: #e0a800;
+}
+
+.reset-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.reset-btn:hover {
+    background-color: #5a6268;
+}
+
+/* Focus Mode Styles */
+#focus-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+    background-color: #2c3e50; /* Dark background for focus */
+    color: white;
+}
+
+#focus-task-title {
+    font-size: 3em;
+    margin-bottom: 30px;
+}
+
+#focus-timer-display {
+    font-size: 5em;
+    margin-bottom: 30px;
+}
+
+.focus-timer-controls .timer-btn {
+    font-size: 1.2em;
+    padding: 10px 20px;
+}
+
+#exit-focus-btn {
+    margin-top: 50px;
+    padding: 15px 30px;
+    font-size: 1.5em;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#exit-focus-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Checklist Styles */
+.checklist-container {
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.checklist-input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 5px;
+}
+
+.add-checklist-item-btn {
+    padding: 8px 12px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.add-checklist-item-btn:hover {
+    background-color: #5a6268;
+}
+
+.checklist-ul {
+    list-style-type: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.9em;
+}
+
+.checklist-item input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.checklist-item span {
+    flex-grow: 1;
+}
+
+.delete-checklist-item-btn {
+    background-color: #ccc;
+    color: #333;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8em;
+    margin-left: 10px;
+}
+
+.delete-checklist-item-btn:hover {
+    background-color: #bbb;
+}
+
+/* Pomodoro Styles */
+.pomodoro-container {
+    background-color: #e9ecef;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.pomodoro-settings label {
+    margin-right: 5px;
+}
+
+.pomodoro-settings input {
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    margin-right: 15px;
+}
+
+.pomodoro-timer-controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#pomodoro-display {
+    font-family: 'Courier New', monospace;
+    font-size: 3em;
+    margin-right: 20px;
+}
+
+#pomodoro-status {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.due-date-input {
+    margin-left: 10px;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.time-diff {
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+.time-diff.over {
+    color: #dc3545; /* Red for over time */
+}
+
+.time-diff.under {
+    color: #28a745; /* Green for under time */
+}

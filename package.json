@@ -1,0 +1,17 @@
+{
+  "name": "gemini-task-app",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "electron": "^37.1.0",
+    "electron-store": "^10.1.0"
+  }
+}
