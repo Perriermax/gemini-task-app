@@ -304,6 +304,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             saveAllData();
         });
 
+        const clearDueDateBtn = document.createElement('button');
+        clearDueDateBtn.textContent = 'クリア';
+        clearDueDateBtn.className = 'clear-due-date-btn';
+        clearDueDateBtn.addEventListener('click', () => {
+            dueDateInput.value = '';
+            updateTaskData(li.dataset.taskId, 'dueDate', '');
+            renderAllTasks();
+            saveAllData();
+        });
+
         const timerDisplay = document.createElement('span');
         timerDisplay.className = 'timer-display';
         timerDisplay.textContent = formatTime(task.timer.elapsedTime);
@@ -387,6 +397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.appendChild(span);
         li.appendChild(prioritySelect);
         li.appendChild(dueDateInput);
+        li.appendChild(clearDueDateBtn); // Add clear due date button
         li.appendChild(timerDisplay);
         li.appendChild(startBtn);
         li.appendChild(pauseBtn);
@@ -451,7 +462,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
         if (taskDueDate && taskDueDate.setHours(0,0,0,0) === currentViewDate.getTime()) {
             todayTaskList.appendChild(li);
-        } else {
+        } else if (taskDueDate && taskDueDate < currentViewDate && !task.completed) { // Overdue and incomplete
+            todayTaskList.appendChild(li);
+        }else {
             taskOverviewList.appendChild(li);
         }
     }
