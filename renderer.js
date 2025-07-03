@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const focusResetBtn = document.getElementById('focus-reset-btn');
     const exitFocusBtn = document.getElementById('exit-focus-btn');
 
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+
     const taskInput = document.getElementById('task-input');
     const estimatedTimeInput = document.getElementById('estimated-time-input');
     const addTaskBtn = document.getElementById('add-task-btn');
@@ -80,12 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     isAppReady = true;
-
-    // Initial check for column display
-    updateColumnDisplay();
-
-    // Listen for window resize events
-    window.addEventListener('resize', updateColumnDisplay);
+    let isCompactMode = false; // UIモードの状態を管理
 
     addTaskBtn.addEventListener('click', addTask);
     taskInput.addEventListener('keypress', (e) => {
@@ -99,14 +97,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Date navigation event listeners
     prevDayBtn.addEventListener('click', () => {
         currentViewDate.setDate(currentViewDate.getDate() - 1);
-        console.log('Prev Day Clicked. currentViewDate:', currentViewDate.toLocaleDateString());
-        console.log('All Tasks before render:', allTasks.map(t => ({ text: t.text, dueDate: t.dueDate })));
         renderAllTasks();
     });
     nextDayBtn.addEventListener('click', () => {
         currentViewDate.setDate(currentViewDate.getDate() + 1);
-        console.log('Next Day Clicked. currentViewDate:', currentViewDate.toLocaleDateString());
-        console.log('All Tasks before render:', allTasks.map(t => ({ text: t.text, dueDate: t.dueDate })));
         renderAllTasks();
     });
 
@@ -125,6 +119,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         saveAllData();
     });
 
+    // UIモード切り替えのキーボードショートカット
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'M') { // Ctrl+Shift+M で切り替え
+            toggleUIMode();
+        }
+    });
+
+    function toggleUIMode() {
+        isCompactMode = !isCompactMode;
+        if (isCompactMode) {
+            normalView.classList.add('compact-mode');
+            // コンパクトモード: todayTaskColumn を sidebar に戻す
+            sidebar.appendChild(todayTaskColumn);
+            window.electronAPI.toggleWindowMode('compact'); // mainプロセスに通知
+        } else {
+            normalView.classList.remove('compact-mode');
+            // 拡張モード: todayTaskColumn を mainContent の先頭に移動
+            mainContent.prepend(todayTaskColumn);
+            window.electronAPI.toggleWindowMode('expanded'); // mainプロセスに通知
+        }
+    }
+
     function addTask() {
         const taskText = taskInput.value.trim();
         const estimatedTime = parseInt(estimatedTimeInput.value) || 0;
@@ -140,8 +156,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let draggedItem = null;
 
-    const taskHoldingAreaColumn = taskHoldingAreaList.closest('.task-column');
-    const todayTaskColumn = todayTaskList.closest('.task-column');
+    const taskHoldingAreaColumn = document.getElementById('holding-area-column');
+    const todayTaskColumn = document.getElementById('today-task-column');
 
     // Drag and Drop Event Listeners for column containers
     [taskHoldingAreaColumn, todayTaskColumn].forEach(column => {
@@ -167,13 +183,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Determine the target list based on the column
             let targetList;
-            if (column.contains(todayTaskList)) {
+            if (column.id === 'today-task-column') {
                 targetList = todayTaskList;
                 const year = currentViewDate.getFullYear();
                 const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
                 const day = String(currentViewDate.getDate()).padStart(2, '0');
                 draggedTaskData.dueDate = `${year}-${month}-${day}`;
-            } else if (column.contains(taskHoldingAreaList)) {
+            } else if (column.id === 'holding-area-column') {
                 targetList = taskHoldingAreaList;
                 draggedTaskData.dueDate = '';
             }
@@ -373,16 +389,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             saveAllData();
         });
 
-        const clearDueDateBtn = document.createElement('button');
-        clearDueDateBtn.textContent = 'クリア';
-        clearDueDateBtn.className = 'clear-due-date-btn';
-        clearDueDateBtn.addEventListener('click', () => {
-            dueDateInput.value = '';
-            updateTaskData(li.dataset.taskId, 'dueDate', '');
-            renderAllTasks();
-            saveAllData();
-        });
-
         const timerDisplay = document.createElement('span');
         timerDisplay.className = 'timer-display';
         timerDisplay.textContent = formatTime(task.timer.elapsedTime);
@@ -466,7 +472,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.appendChild(span);
         li.appendChild(prioritySelect);
         li.appendChild(dueDateInput);
-        li.appendChild(clearDueDateBtn);
         li.appendChild(timerDisplay);
         li.appendChild(startBtn);
         li.appendChild(pauseBtn);

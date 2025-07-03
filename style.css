@@ -319,14 +319,39 @@ li.priority-低 {
     color: #28a745; /* Green for under time */
 }
 
-/* Task Columns */
-.task-columns {
+#normal-view {
     display: flex;
-    gap: 20px; /* Space between columns */
+    height: 100vh; /* ビューポートの高さ全体を使用 */
 }
 
+#normal-view.compact-mode #sidebar {
+    width: 330px; /* コンパクトモードではサイドバーの幅を固定 */
+    box-shadow: none;
+}
+
+#normal-view.compact-mode #main-content {
+    display: none; /* コンパクトモードではメインコンテンツを非表示 */
+}
+
+#sidebar {
+    width: 330px; /* サイドバーの固定幅 */
+    background-color: #f8f9fa; /* サイドバーの背景色 */
+    padding: 15px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1); /* 右側に影 */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#main-content {
+    flex-grow: 1; /* 残りのスペースをすべて使用 */
+    padding: 15px;
+    background-color: #e9ecef; /* メインコンテンツの背景色 */
+    overflow-y: auto; /* コンテンツがはみ出た場合にスクロール */
+}
+
+/* Task Columns */
 .task-column {
-    flex: 1; /* Distribute space equally */
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
@@ -336,33 +361,110 @@ li.priority-低 {
     transition: border-color 0.2s ease-in-out;
 }
 
-.task-column.drag-over {
-    border-color: #007bff; /* ドラッグオーバー時にボーダーの色を変更 */
-    background-color: #eaf4ff; /* ドラッグオーバー時に背景色を変更 */
+#today-task-column {
+    flex-grow: 1; /* サイドバー内で残りのスペースを埋める */
+    display: flex;
+    flex-direction: column;
 }
 
-
-.task-column h1 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.5em;
-    color: #555;
+#today-task-column ul {
+    flex-grow: 1;
+    overflow-y: auto; /* タスクがはみ出た場合にスクロール */
 }
 
-/* Responsive layout for task columns */
-@media (max-width: 900px) {
-    .task-columns {
-        flex-direction: column; /* Stack columns vertically */
-    }
-    .task-column {
-        margin-bottom: 20px; /* Add space between stacked columns */
-    }
-    .task-column:nth-child(1) {
-        display: none; /* Hide the first column (Task Overview) */
-    }
-    .task-columns.show-all .task-column:nth-child(1) {
-        display: block; /* Show it when show-all is active */
-    }
+#holding-area-column {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#holding-area-column ul {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+#normal-view.compact-mode #sidebar {
+    width: 330px; /* コンパクトモードではサイドバーの幅を固定 */
+    box-shadow: none;
+}
+
+#normal-view.compact-mode #main-content {
+    display: none; /* コンパクトモードではメインコンテンツを非表示 */
+}
+
+#normal-view.compact-mode #today-task-column {
+    min-height: auto; /* コンパクトモードでは高さを自動調整 */
+}
+
+#normal-view.compact-mode .pomodoro-container {
+    display: block; /* コンパクトモードではポモドーロを表示 */
+}
+
+#normal-view:not(.compact-mode) #pomodoro-container {
+    display: none; /* 拡張モードではポモドーロを非表示 */
+}
+
+#normal-view:not(.compact-mode) #sidebar {
+    display: none; /* 拡張モードではサイドバーを非表示 */
+}
+
+#normal-view:not(.compact-mode) #main-content {
+    display: flex; /* 拡張モードではメインコンテンツをFlexboxに */
+    gap: 20px; /* カラム間のスペース */
+}
+
+#normal-view:not(.compact-mode) #today-task-column {
+    flex: 1; /* 拡張モードでは今日のタスクカラムが均等にスペースを占める */
+    min-height: 800px; /* 拡張モードでの最小高さ */
+}
+
+#normal-view:not(.compact-mode) #holding-area-column {
+    flex: 1; /* 拡張モードではタスク置き場カラムが均等にスペースを占める */
+    min-height: 800px; /* 拡張モードでの最小高さ */
+}
+
+/* コンパクトモード時の要素調整 */
+#normal-view.compact-mode #sidebar .task-column h1 {
+    font-size: 1em; /* フォントサイズをさらに小さく */
+    flex-shrink: 1; /* 必要に応じて縮小 */
+}
+
+#normal-view.compact-mode #sidebar li {
+    padding: 5px;
+    font-size: 0.9em;
+}
+
+#normal-view.compact-mode #sidebar .timer-display,
+#normal-view.compact-mode #sidebar .timer-btn,
+#normal-view.compact-mode #sidebar .priority-select,
+#normal-view.compact-mode #sidebar .due-date-input,
+#normal-view.compact-mode #sidebar .clear-due-date-btn,
+#normal-view.compact-mode #sidebar .focus-btn,
+#normal-view.compact-mode #sidebar .delete-btn,
+#normal-view.compact-mode #sidebar .time-diff,
+#normal-view.compact-mode #sidebar .checklist-container {
+    display: none; /* コンパクトモードでは一部の要素を非表示 */
+}
+
+#normal-view.compact-mode #sidebar .pomodoro-settings,
+#normal-view.compact-mode #sidebar .pomodoro-timer-controls {
+    transform: scale(0.8); /* ポモドーロタイマーを縮小 */
+    transform-origin: top left;
+}
+
+#normal-view.compact-mode #sidebar .pomodoro-display {
+    font-size: 2em; /* ポモドーロ表示のフォントサイズ調整 */
+}
+
+#normal-view.compact-mode #sidebar .pomodoro-status {
+    font-size: 0.8em;
+}
+
+#normal-view.compact-mode #sidebar .today-task-header button {
+    padding: 2px 4px;
+    font-size: 0.7em;
+    flex-shrink: 0; /* ボタンが縮まないようにする */
+    flex-grow: 0; /* ボタンが伸びないようにする */
 }
 
 .today-task-header {
@@ -370,37 +472,15 @@ li.priority-低 {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    flex-wrap: nowrap; /* 要素の折り返しを防ぐ */
 }
 
-.today-task-header h1 {
-    margin: 0; /* Remove default h1 margin */
+#normal-view.compact-mode #sidebar .today-task-header h1 {
+    font-size: 1em; /* フォントサイズをさらに小さく */
+    flex-shrink: 1; /* 必要に応じて縮小 */
+    white-space: nowrap; /* テキストを改行しない */
+    overflow: hidden; /* はみ出したテキストを非表示 */
+    text-overflow: ellipsis; /* はみ出したテキストを省略表示 */
 }
 
-.today-task-header button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    padding: 5px 10px;
-    font-size: 1em;
-}
 
-.today-task-header button:hover {
-    background-color: #0056b3;
-}
-
-.clear-due-date-btn {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    padding: 5px 10px;
-    margin-left: 5px;
-    font-size: 0.8em;
-}
-
-.clear-due-date-btn:hover {
-    background-color: #5a6268;
-}

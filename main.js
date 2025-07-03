@@ -14,7 +14,8 @@ function createWindow () {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
-    }
+    },
+    useContentSize: true // ここを追加
   });
 
   win.loadFile('index.html');
@@ -42,6 +43,28 @@ app.whenReady().then(async () => {
   });
   ipcMain.on('set-data', (event, data) => {
     store.set('appData', data);
+  });
+
+  // ウィンドウモード切り替えのIPCハンドラ
+  ipcMain.on('toggleWindowMode', (event, mode) => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (!win) return;
+
+    const screen = require('electron').screen;
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+
+    if (mode === 'compact') {
+      win.setSize(350, height); // サイドバーの幅 + Dockに被らない画面の高さ
+      win.setPosition(0, 0); // 左上隅に配置
+      win.setAlwaysOnTop(true); // 常に手前に表示
+    } else {
+      win.setSize(1200, 800); // デフォルトサイズに戻す (拡大)
+      win.center(); // 画面中央に配置
+      win.setAlwaysOnTop(false); // 常に手前に表示を解除
+    }
+    console.log(`Window size after toggle (${mode}):`, win.getSize());
+    console.log(`Content size after toggle (${mode}):`, win.getContentSize());
   });
 
   createWindow();

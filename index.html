@@ -7,25 +7,38 @@
 </head>
 <body>
     <div id="normal-view">
-        <div class="pomodoro-container">
-            <h2>ポモドーロタイマー</h2>
-            <div class="pomodoro-settings">
-                <label for="work-duration">作業時間 (分):</label>
-                <input type="number" id="work-duration" value="25" min="1">
-                <label for="break-duration">休憩時間 (分):</label>
-                <input type="number" id="break-duration" value="5" min="1">
+        <div id="sidebar">
+            <div class="pomodoro-container">
+                <h2>ポモドーロタイマー</h2>
+                <div class="pomodoro-settings">
+                    <label for="work-duration">作業時間 (分):</label>
+                    <input type="number" id="work-duration" value="25" min="1">
+                    <label for="break-duration">休憩時間 (分):</label>
+                    <input type="number" id="break-duration" value="5" min="1">
+                </div>
+                <div class="pomodoro-timer-controls">
+                    <span id="pomodoro-display">25:00</span>
+                    <button id="pomodoro-start-btn" class="timer-btn start-btn">開始</button>
+                    <button id="pomodoro-pause-btn" class="timer-btn pause-btn" style="display: none;">一時停止</button>
+                    <button id="pomodoro-reset-btn" class="timer-btn reset-btn">リセット</button>
+                </div>
+                <p id="pomodoro-status"></p>
             </div>
-            <div class="pomodoro-timer-controls">
-                <span id="pomodoro-display">25:00</span>
-                <button id="pomodoro-start-btn" class="timer-btn start-btn">開始</button>
-                <button id="pomodoro-pause-btn" class="timer-btn pause-btn" style="display: none;">一時停止</button>
-                <button id="pomodoro-reset-btn" class="timer-btn reset-btn">リセット</button>
+
+            <div class="task-column" id="today-task-column">
+                <div class="today-task-header">
+                    <button id="prev-day-btn">&lt;</button>
+                    <h1 id="today-date-display">今日のタスク</h1>
+                    <button id="next-day-btn">&gt;</button>
+                </div>
+                <ul id="today-task-list">
+                    <!-- 今日のタスクはここに追加されます -->
+                </ul>
             </div>
-            <p id="pomodoro-status"></p>
         </div>
 
-        <div class="task-columns">
-            <div class="task-column">
+        <div id="main-content">
+            <div class="task-column" id="holding-area-column">
                 <h1>タスク置き場</h1>
                 <div class="input-container">
                     <input type="text" id="task-input" placeholder="新しいタスクを入力...">
@@ -34,17 +47,6 @@
                 </div>
                 <ul id="task-holding-area-list">
                     <!-- タスクはここに追加されます -->
-                </ul>
-            </div>
-
-            <div class="task-column">
-                <div class="today-task-header">
-                        <button id="prev-day-btn">&lt;</button>
-                        <h1 id="today-date-display">今日のタスク</h1>
-                        <button id="next-day-btn">&gt;</button>
-                </div>
-                <ul id="today-task-list">
-                    <!-- 今日のタスクはここに追加されます -->
                 </ul>
             </div>
         </div>
