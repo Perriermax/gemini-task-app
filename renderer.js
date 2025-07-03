@@ -99,10 +99,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Date navigation event listeners
     prevDayBtn.addEventListener('click', () => {
         currentViewDate.setDate(currentViewDate.getDate() - 1);
+        console.log('Prev Day Clicked. currentViewDate:', currentViewDate.toLocaleDateString());
+        console.log('All Tasks before render:', allTasks.map(t => ({ text: t.text, dueDate: t.dueDate })));
         renderAllTasks();
     });
     nextDayBtn.addEventListener('click', () => {
         currentViewDate.setDate(currentViewDate.getDate() + 1);
+        console.log('Next Day Clicked. currentViewDate:', currentViewDate.toLocaleDateString());
+        console.log('All Tasks before render:', allTasks.map(t => ({ text: t.text, dueDate: t.dueDate })));
         renderAllTasks();
     });
 
@@ -127,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (taskText === '') return;
         const newTask = { text: taskText, completed: false, priority: '低', timer: { elapsedTime: 0, isRunning: false }, checklist: [], dueDate: '', estimatedTime: estimatedTime };
         allTasks.push(newTask);
-        renderAllTasks(); // Re-render all tasks to place the new task correctly
+        renderAllTasks();
         saveAllData();
         taskInput.value = '';
         estimatedTimeInput.value = '';
@@ -135,6 +139,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     let draggedItem = null;
+
+    const taskHoldingAreaColumn = taskHoldingAreaList.closest('.task-column');
+    const todayTaskColumn = todayTaskList.closest('.task-column');
+
+    // Drag and Drop Event Listeners for column containers
+    [taskHoldingAreaColumn, todayTaskColumn].forEach(column => {
+        column.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Allow drop
+            column.classList.add('drag-over');
+        });
+
+        column.addEventListener('dragleave', () => {
+            column.classList.remove('drag-over');
+        });
+
+        column.addEventListener('drop', (e) => {
+            e.preventDefault();
+            column.classList.remove('drag-over');
+
+            if (!draggedItem) return; // No item being dragged
+
+            const draggedTaskId = draggedItem.dataset.taskId;
+            const draggedTaskData = allTasks.find(t => t.id === draggedTaskId);
+
+            if (!draggedTaskData) return; // Task data not found
+
+            // Determine the target list based on the column
+            let targetList;
+            if (column.contains(todayTaskList)) {
+                targetList = todayTaskList;
+                const year = currentViewDate.getFullYear();
+                const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
+                const day = String(currentViewDate.getDate()).padStart(2, '0');
+                draggedTaskData.dueDate = `${year}-${month}-${day}`;
+            } else if (column.contains(taskHoldingAreaList)) {
+                targetList = taskHoldingAreaList;
+                draggedTaskData.dueDate = '';
+            }
+
+            if (targetList) {
+                // Remove from old position in allTasks
+                allTasks = allTasks.filter(task => task.id !== draggedTaskId);
+                // Add to the end of the allTasks array (for now, reordering will happen on render)
+                allTasks.push(draggedTaskData);
+
+                // Append the dragged item to the target list in the DOM
+                targetList.appendChild(draggedItem);
+            }
+
+            saveAllData();
+            renderAllTasks(); // Re-render to ensure correct order and display
+
+            draggedItem = null; // Reset dragged item
+        });
+    });
 
     function createTaskElement(task) {
         task.timer = task.timer || { elapsedTime: 0, isRunning: false };
@@ -148,16 +207,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         li.dataset.task = JSON.stringify(task);
         li.draggable = true; // Make task items draggable
 
-        // Drag and Drop Event Listeners
+        // Drag and Drop Event Listeners for individual list items (for reordering within list)
         li.addEventListener('dragstart', (e) => {
             draggedItem = li;
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', li.innerHTML);
+            e.dataTransfer.setData('text/plain', li.dataset.taskId); // Use plain text for ID
             li.classList.add('dragging');
         });
 
         li.addEventListener('dragover', (e) => {
-            e.preventDefault(); // Necessary to allow dropping
+            e.preventDefault();
             const bounding = li.getBoundingClientRect();
             const offset = bounding.y + (bounding.height / 2);
             if (e.clientY < offset) {
@@ -177,47 +236,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             li.classList.remove('drag-over-top', 'drag-over-bottom');
 
-            if (draggedItem === li) return;
+            if (draggedItem === li || !draggedItem) return; // Dropping on itself or no item being dragged
 
             const parentList = li.parentNode;
-            const draggedTaskData = allTasks.find(t => t.id === draggedItem.dataset.taskId);
+            const draggedTaskId = draggedItem.dataset.taskId;
+            const targetTaskId = li.dataset.taskId;
 
-            // If dropped into today-task-list, update dueDate
+            const draggedTask = allTasks.find(t => t.id === draggedTaskId);
+            const targetTask = allTasks.find(t => t.id === targetTaskId);
+
+            if (!draggedTask || !targetTask) return; // Should not happen if IDs are valid
+
+            // Update dueDate based on target list (if dropped onto a task within a list)
             if (parentList.id === 'today-task-list') {
-                if (draggedTaskData) {
-                    const year = currentViewDate.getFullYear();
-                    const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(currentViewDate.getDate()).padStart(2, '0');
-                    draggedTaskData.dueDate = `${year}-${month}-${day}`;
-                }
-            } else if (parentList.id === 'task-holding-area-list') { // If dropped into task-holding-area-list, clear dueDate
-                if (draggedTaskData) {
-                    draggedTaskData.dueDate = '';
-                }
+                const year = currentViewDate.getFullYear();
+                const month = String(currentViewDate.getMonth() + 1).padStart(2, '0');
+                const day = String(currentViewDate.getDate()).padStart(2, '0');
+                draggedTask.dueDate = `${year}-${month}-${day}`;
+            } else if (parentList.id === 'task-holding-area-list') {
+                draggedTask.dueDate = '';
             }
 
-            // Reorder in allTasks array (simplified for single list for now)
-            // This part needs to be more robust for cross-list dragging if lists were active
-            const targetTask = allTasks.find(t => t.id === li.dataset.taskId);
-
-            const oldIndex = allTasks.indexOf(draggedTaskData);
+            // Reorder in allTasks array
+            const oldIndex = allTasks.indexOf(draggedTask);
             const newIndex = allTasks.indexOf(targetTask);
 
             if (oldIndex > -1 && newIndex > -1) {
                 allTasks.splice(oldIndex, 1);
-                allTasks.splice(newIndex, 0, draggedTaskData);
+                // Insert draggedTask before or after targetTask based on drop position
+                if (e.clientY < li.getBoundingClientRect().y + (li.getBoundingClientRect().height / 2)) {
+                    allTasks.splice(newIndex, 0, draggedTask);
+                    parentList.insertBefore(draggedItem, li); // Insert before target in DOM
+                } else {
+                    allTasks.splice(newIndex + 1, 0, draggedTask);
+                    parentList.insertBefore(draggedItem, li.nextSibling); // Insert after target in DOM
+                }
+            } else { // This handles cross-list drops onto a task item
+                // Remove from old list in DOM
+                draggedItem.parentNode.removeChild(draggedItem);
+                // Append to new list in DOM (before or after target)
+                if (e.clientY < li.getBoundingClientRect().y + (li.getBoundingClientRect().height / 2)) {
+                    parentList.insertBefore(draggedItem, li);
+                } else {
+                    parentList.insertBefore(draggedItem, li.nextSibling);
+                }
             }
-            renderAllTasks();
+
             saveAllData();
+            renderAllTasks(); // Re-render to ensure correct order and display
+            draggedItem = null; // Reset dragged item after successful drop
         });
 
         li.addEventListener('dragend', () => {
-            draggedItem.classList.remove('dragging');
+            li.classList.remove('dragging');
             document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
                 el.classList.remove('drag-over-top', 'drag-over-bottom');
             });
             draggedItem = null;
-            saveAllData();
         });
 
         if (task.completed) {
@@ -454,11 +529,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Append to correct list based on due date
         const taskDueDate = task.dueDate ? new Date(task.dueDate) : null;
-        if (taskDueDate && taskDueDate.setHours(0,0,0,0) === currentViewDate.getTime()) {
+        const isTodayTask = taskDueDate && taskDueDate.setHours(0,0,0,0) === currentViewDate.getTime();
+        const isOverdueTask = taskDueDate && taskDueDate < currentViewDate && !task.completed;
+
+        console.log('-- Task Element Creation --');
+        console.log('Task:', task.text, 'DueDate:', task.dueDate);
+        console.log('currentViewDate:', currentViewDate.toLocaleDateString());
+        console.log('taskDueDate (Date object):', taskDueDate);
+        if (taskDueDate) {
+            console.log('taskDueDate (cleared time):', new Date(taskDueDate).setHours(0,0,0,0));
+        }
+        console.log('currentViewDate (cleared time):', currentViewDate.getTime());
+        console.log('isTodayTask:', isTodayTask);
+
+        if (isTodayTask) {
+            console.log('Appending to todayTaskList');
             todayTaskList.appendChild(li);
-        } else if (taskDueDate && taskDueDate < currentViewDate && !task.completed) { // Overdue and incomplete
-            todayTaskList.appendChild(li);
-        }else {
+        } else if (!task.completed && task.dueDate === '') { // 未完了かつ期日が設定されていないタスクのみをタスク置き場に表示
+            console.log('Appending to taskHoldingAreaList');
             taskHoldingAreaList.appendChild(li);
         }
     }
@@ -631,7 +719,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         pomodoroPhase = 'break';
                         pomodoroTimeLeft = breakDurationInput.value * 60;
                         pomodoroStatus.textContent = '休憩中...';
-                    }m
+                    }
                 } else {
                     pomodoroPhase = 'work';
                     pomodoroTimeLeft = workDurationInput.value * 60;
@@ -727,7 +815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to re-render all tasks based on current data
     function renderAllTasks() {
         // Clear existing tasks from both lists
-        taskHoldingAreaList.innerHTML = ''; // Changed from taskOverviewList
+        taskHoldingAreaList.innerHTML = '';
         todayTaskList.innerHTML = '';
 
         // Update today's date display

@@ -331,7 +331,16 @@ li.priority-低 {
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 300px; /* ドラッグアンドドロップのターゲットとして十分な高さを確保 */
+    /* border: 2px dashed transparent; */
+    transition: border-color 0.2s ease-in-out;
 }
+
+.task-column.drag-over {
+    border-color: #007bff; /* ドラッグオーバー時にボーダーの色を変更 */
+    background-color: #eaf4ff; /* ドラッグオーバー時に背景色を変更 */
+}
+
 
 .task-column h1 {
     margin-top: 0;
